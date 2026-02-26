@@ -1,40 +1,35 @@
-// Get all links on the page
-const links = document.querySelectorAll("a");
-
-// Filter for links that contain the Salesforce download pattern
-const downloadLinks = Array.from(links).filter(
-  (link) =>
-    link.href.includes("servlet.shepherd/document/download") ||
-    link.innerText === "Download",
+// Target all anchor tags that contain the word "download" (case-insensitive)
+const downloadLinks = Array.from(document.querySelectorAll("a")).filter(
+  (link) => link.innerText.toLowerCase().trim() === "download",
 );
 
 const totalFiles = downloadLinks.length;
 const intervalMs = 30000; // 30 seconds
 
-console.log(`🚀 Automation Started: ${totalFiles} files found.`);
-console.log(
-  `⏱️ Interval set to ${intervalMs / 1000} seconds. Please keep this tab open.`,
-);
+if (totalFiles === 0) {
+  console.error(
+    "❌ Still 0 files found. Make sure you are running this in the correct frame if Salesforce is using an iFrame.",
+  );
+} else {
+  console.log(`🚀 Success! Found ${totalFiles} download links.`);
+  console.log(
+    `⏱️ Starting sequence... This will take approx ${Math.round((totalFiles * 30) / 60)} minutes.`,
+  );
 
-downloadLinks.forEach((link, index) => {
-  setTimeout(() => {
-    const fileNumber = index + 1;
-    const remaining = totalFiles - fileNumber;
+  downloadLinks.forEach((link, index) => {
+    setTimeout(() => {
+      const fileNumber = index + 1;
 
-    // Trigger the download
-    link.click();
+      // Trigger download
+      link.click();
 
-    // Log confirmation to the console
-    console.log(
-      `✅ [${new Date().toLocaleTimeString()}] Started download for file ${fileNumber} of ${totalFiles}.`,
-    );
-
-    if (remaining > 0) {
-      console.log(`⏳ Next download in 30 seconds... (${remaining} remaining)`);
-    } else {
       console.log(
-        `🎉 Success! All ${totalFiles} downloads have been initiated.`,
+        `✅ [${new Date().toLocaleTimeString()}] Downloaded ${fileNumber} of ${totalFiles}.`,
       );
-    }
-  }, index * intervalMs);
-});
+
+      if (fileNumber < totalFiles) {
+        console.log(`⏳ Waiting 30 seconds for next file...`);
+      }
+    }, index * intervalMs);
+  });
+}
