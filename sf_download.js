@@ -5,65 +5,64 @@ const downloadLinks = Array.from(document.querySelectorAll("a")).filter(
 
 const actualUrls = [];
 
-// 2. Rip the true URLs out of Salesforce's srcUp() function
+// 2. Aggressively rip the URLs out of the href attributes
 downloadLinks.forEach((link) => {
-  let href = link.getAttribute("href");
+  // Get the raw HTML attribute rather than the browser's interpreted href
+  let href = link.getAttribute("href") || "";
 
-  if (href && href.includes("srcUp(")) {
-    // Extract the hidden string inside srcUp('...')
-    const match = href.match(/srcUp\(['"]([^'"]+)['"]\)/);
+  if (href.includes("srcUp")) {
+    // Grab everything inside the parentheses: srcUp( ... )
+    let match = href.match(/srcUp\((.*?)\)/);
     if (match && match[1]) {
-      let cleanUrl = match[1];
-      // Decode it if Salesforce URL-encoded the slashes (e.g. %2Fservlet...)
-      if (cleanUrl.includes("%2F") || cleanUrl.includes("%3F")) {
-        cleanUrl = decodeURIComponent(cleanUrl);
-      }
-      // Resolve to a full URL
-      actualUrls.push(new URL(cleanUrl, window.location.origin).href);
+      // Get the first parameter and strip out any quotes, spaces, or URL-encoded quotes (%27)
+      let rawPath = match[1].split(",")[0].replace(/['"%27\s]/gi, "");
+
+      // Construct the full URL to ensure the browser knows exactly where to go
+      let fullUrl = rawPath.startsWith("http")
+        ? rawPath
+        : window.location.origin +
+          (rawPath.startsWith("/") ? "" : "/") +
+          rawPath;
+      actualUrls.push(fullUrl);
     }
-  } else if (href && !href.startsWith("javascript:")) {
-    // Fallback for standard links
+  } else if (!href.startsWith("javascript:")) {
+    // Fallback just in case some links are standard
     actualUrls.push(link.href);
   }
 });
 
-const totalFiles = actualUrls.length;
-const intervalMs = 30000; // 30 seconds
+// 3. Run a quick test on just the first 3 files
+const testUrls = actualUrls.slice(0, 3);
 
-if (totalFiles === 0) {
-  console.error("❌ 0 URLs extracted. Double-check your iframe target.");
-} else {
-  console.log(
-    `🚀 Successfully ripped ${totalFiles} raw URLs! Bypassing Salesforce scripts...`,
+if (testUrls.length === 0) {
+  console.error(
+    "❌ Still 0 URLs extracted. Please right-click one of the 'download' links on the page, select 'Inspect', and tell me exactly what the highlighted HTML code says.",
   );
+} else {
+  console.log(`🚀 Success! Extracted ${actualUrls.length} total URLs.`);
+  console.log(
+    `🔬 Testing the first ${testUrls.length} files to ensure they download correctly...`,
+  );
+  console.log(testUrls); // This will print the raw URLs to your console so you can verify them
 
-  // 3. Download using the raw URLs
-  actualUrls.forEach((url, index) => {
+  testUrls.forEach((url, index) => {
     setTimeout(() => {
       const fileNumber = index + 1;
 
-      // Create a temporary, invisible iframe for the raw URL
+      // Inject the hidden iframe to trigger the download directly from the server
       const dlFrame = document.createElement("iframe");
       dlFrame.style.display = "none";
       document.body.appendChild(dlFrame);
-
-      // Trigger download directly from the server endpoint
       dlFrame.src = url;
 
       console.log(
-        `✅ [${new Date().toLocaleTimeString()}] Download ${fileNumber} of ${totalFiles} requested.`,
+        `✅ [${new Date().toLocaleTimeString()}] Download ${fileNumber} requested.`,
       );
 
-      // Clean up the iframe after 60 seconds
+      // Clean up
       setTimeout(() => {
         if (document.body.contains(dlFrame)) document.body.removeChild(dlFrame);
       }, 60000);
-
-      if (fileNumber < totalFiles) {
-        console.log(`⏳ Waiting 30 seconds for next file...`);
-      } else {
-        console.log(`🏁 All downloads triggered!`);
-      }
-    }, index * intervalMs);
+    }, index * 5000); // 5-second interval for the quick test
   });
 }
