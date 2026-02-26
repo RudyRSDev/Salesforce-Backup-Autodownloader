@@ -1,55 +1,55 @@
-// 1. Find the download links
-const downloadLinks = Array.from(document.querySelectorAll("a")).filter(
-  (link) => link.innerText.toLowerCase().trim() === "download",
-);
+// 1. Find the download links using the specific class from your HTML
+const downloadLinks = Array.from(
+  document.querySelectorAll("a.actionLink"),
+).filter((link) => link.innerText.toLowerCase().trim() === "download");
 
 const actualUrls = [];
 
-// 2. Aggressively rip the URLs out of the href attributes
+// 2. Decode and extract the raw download paths
 downloadLinks.forEach((link) => {
-  // Get the raw HTML attribute rather than the browser's interpreted href
   let href = link.getAttribute("href") || "";
 
   if (href.includes("srcUp")) {
-    // Grab everything inside the parentheses: srcUp( ... )
-    let match = href.match(/srcUp\((.*?)\)/);
+    // Extract the encoded string inside srcUp(...)
+    let match = href.match(/srcUp\(([^)]+)\)/);
     if (match && match[1]) {
-      // Get the first parameter and strip out any quotes, spaces, or URL-encoded quotes (%27)
-      let rawPath = match[1].split(",")[0].replace(/['"%27\s]/gi, "");
-
-      // Construct the full URL to ensure the browser knows exactly where to go
-      let fullUrl = rawPath.startsWith("http")
-        ? rawPath
-        : window.location.origin +
-          (rawPath.startsWith("/") ? "" : "/") +
-          rawPath;
-      actualUrls.push(fullUrl);
+      // Decode the URL (turns %2F into /, %3F into ?, etc.)
+      let decodedUrl = decodeURIComponent(match[1]);
+      // Strip off the remaining single quotes from the start and end
+      decodedUrl = decodedUrl.replace(/^['"]|['"]$/g, "");
+      actualUrls.push(decodedUrl);
     }
-  } else if (!href.startsWith("javascript:")) {
-    // Fallback just in case some links are standard
-    actualUrls.push(link.href);
+  } else if (href.includes("servlet.OrgExport")) {
+    // For the first link, strip away the Lightning redirect wrapper
+    // to get the direct server endpoint
+    let startIdx = href.indexOf("/servlet/");
+    if (startIdx !== -1) {
+      actualUrls.push(href.substring(startIdx));
+    } else {
+      actualUrls.push(href);
+    }
   }
 });
 
-// 3. Run a quick test on just the first 3 files
-const testUrls = actualUrls.slice(0, 3);
+// 3. Resolve all extracted paths to absolute URLs
+const finalUrls = actualUrls.map(
+  (url) => new URL(url, window.location.origin).href,
+);
 
-if (testUrls.length === 0) {
-  console.error(
-    "❌ Still 0 URLs extracted. Please right-click one of the 'download' links on the page, select 'Inspect', and tell me exactly what the highlighted HTML code says.",
-  );
+if (finalUrls.length === 0) {
+  console.error("❌ No URLs extracted. We missed something in the parsing.");
 } else {
-  console.log(`🚀 Success! Extracted ${actualUrls.length} total URLs.`);
-  console.log(
-    `🔬 Testing the first ${testUrls.length} files to ensure they download correctly...`,
-  );
-  console.log(testUrls); // This will print the raw URLs to your console so you can verify them
+  console.log(`🚀 Success! Extracted ${finalUrls.length} raw URLs.`);
+
+  // 4. Test the first 3 links
+  const testUrls = finalUrls.slice(0, 3);
+  console.log("🔬 Testing with these URLs:", testUrls);
 
   testUrls.forEach((url, index) => {
     setTimeout(() => {
       const fileNumber = index + 1;
 
-      // Inject the hidden iframe to trigger the download directly from the server
+      // Inject hidden iframe to trigger download silently
       const dlFrame = document.createElement("iframe");
       dlFrame.style.display = "none";
       document.body.appendChild(dlFrame);
@@ -59,10 +59,10 @@ if (testUrls.length === 0) {
         `✅ [${new Date().toLocaleTimeString()}] Download ${fileNumber} requested.`,
       );
 
-      // Clean up
+      // Cleanup the hidden iframe after 60 seconds
       setTimeout(() => {
         if (document.body.contains(dlFrame)) document.body.removeChild(dlFrame);
       }, 60000);
-    }, index * 5000); // 5-second interval for the quick test
+    }, index * 5000); // 5-second interval for testing
   });
 }
