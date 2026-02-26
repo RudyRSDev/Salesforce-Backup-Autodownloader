@@ -1,34 +1,37 @@
-// 1. Grab all the download URLs
-const links = Array.from(document.querySelectorAll("a"))
-  .filter((l) => l.innerText.toLowerCase().trim() === "download")
-  .map((l) => l.href);
+// Target all anchor tags that contain the word "download" (case-insensitive)
+const downloadLinks = Array.from(document.querySelectorAll("a")).filter(
+  (link) => link.innerText.toLowerCase().trim() === "download",
+);
 
-if (links.length > 0) {
-  // 2. Open a new blank window to act as our "Download Manager"
-  const dlWindow = window.open("", "SF_Manager", "width=400,height=400");
-  dlWindow.document.write(`
-        <html><body>
-            <h3>Salesforce Download Manager</h3>
-            <p id="status">Starting ${links.length} downloads...</p>
-            <script>
-                const urls = ${JSON.stringify(links)};
-                let index = 0;
-                function triggerNext() {
-                    if (index < urls.length) {
-                        window.location.href = urls[index];
-                        document.getElementById('status').innerText = "Downloading " + (index + 1) + " of " + urls.length;
-                        index++;
-                        setTimeout(triggerNext, 30000); // 30 second interval
-                    } else {
-                        document.getElementById('status').innerText = "All downloads complete!";
-                    }
-                }
-                triggerNext();
-            </script>
-        </body></html>
-    `);
-} else {
+const totalFiles = downloadLinks.length;
+const intervalMs = 30000; // 30 seconds
+
+if (totalFiles === 0) {
   console.error(
-    "No links found. Ensure the console is set to the correct frame.",
+    "❌ 0 files found. Make sure your console target is set to the correct frame.",
   );
+} else {
+  console.log(`🚀 Success! Found ${totalFiles} download links.`);
+  console.log(
+    `⏱️ Starting sequence... Estimated time: ${Math.round((totalFiles * 30) / 60)} minutes.`,
+  );
+
+  downloadLinks.forEach((link, index) => {
+    setTimeout(() => {
+      const fileNumber = index + 1;
+
+      // Trigger download in a new tab/window to prevent the parent from refreshing
+      window.open(link.href, "_blank");
+
+      console.log(
+        `✅ [${new Date().toLocaleTimeString()}] Opened download ${fileNumber} of ${totalFiles}.`,
+      );
+
+      if (fileNumber < totalFiles) {
+        console.log(`⏳ Waiting 30 seconds for next file...`);
+      } else {
+        console.log(`🏁 All downloads triggered!`);
+      }
+    }, index * intervalMs);
+  });
 }
