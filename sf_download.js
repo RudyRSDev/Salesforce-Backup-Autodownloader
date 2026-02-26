@@ -10,18 +10,13 @@ downloadLinks.forEach((link) => {
   let href = link.getAttribute("href") || "";
 
   if (href.includes("srcUp")) {
-    // Extract the encoded string inside srcUp(...)
     let match = href.match(/srcUp\(([^)]+)\)/);
     if (match && match[1]) {
-      // Decode the URL (turns %2F into /, %3F into ?, etc.)
       let decodedUrl = decodeURIComponent(match[1]);
-      // Strip off the remaining single quotes from the start and end
       decodedUrl = decodedUrl.replace(/^['"]|['"]$/g, "");
       actualUrls.push(decodedUrl);
     }
   } else if (href.includes("servlet.OrgExport")) {
-    // For the first link, strip away the Lightning redirect wrapper
-    // to get the direct server endpoint
     let startIdx = href.indexOf("/servlet/");
     if (startIdx !== -1) {
       actualUrls.push(href.substring(startIdx));
@@ -35,17 +30,22 @@ downloadLinks.forEach((link) => {
 const finalUrls = actualUrls.map(
   (url) => new URL(url, window.location.origin).href,
 );
+const totalFiles = finalUrls.length;
 
-if (finalUrls.length === 0) {
-  console.error("❌ No URLs extracted. We missed something in the parsing.");
+// Set to 65 seconds to clear the 429 Too Many Requests limit safely
+const intervalMs = 65000;
+
+if (totalFiles === 0) {
+  console.error(
+    "❌ No URLs extracted. Make sure you are in the correct frame.",
+  );
 } else {
-  console.log(`🚀 Success! Extracted ${finalUrls.length} raw URLs.`);
+  console.log(`🚀 Success! Extracted ${totalFiles} raw URLs.`);
+  console.log(
+    `⏱️ Starting sequence... Estimated time: ${((totalFiles * 65) / 3600).toFixed(1)} hours.`,
+  );
 
-  // 4. Test the first 3 links
-  const testUrls = finalUrls.slice(0, 3);
-  console.log("🔬 Testing with these URLs:", testUrls);
-
-  testUrls.forEach((url, index) => {
+  finalUrls.forEach((url, index) => {
     setTimeout(() => {
       const fileNumber = index + 1;
 
@@ -56,13 +56,21 @@ if (finalUrls.length === 0) {
       dlFrame.src = url;
 
       console.log(
-        `✅ [${new Date().toLocaleTimeString()}] Download ${fileNumber} requested.`,
+        `✅ [${new Date().toLocaleTimeString()}] Download ${fileNumber} of ${totalFiles} requested.`,
       );
 
       // Cleanup the hidden iframe after 60 seconds
       setTimeout(() => {
         if (document.body.contains(dlFrame)) document.body.removeChild(dlFrame);
       }, 60000);
-    }, index * 5000); // 5-second interval for testing
+
+      if (fileNumber < totalFiles) {
+        console.log(`⏳ Waiting 65 seconds for the next file...`);
+      } else {
+        console.log(
+          `🏁 All downloads triggered! Leave the browser open until the last file finishes saving.`,
+        );
+      }
+    }, index * intervalMs);
   });
 }
