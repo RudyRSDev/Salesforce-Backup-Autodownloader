@@ -4,10 +4,10 @@
   // ==========================================
   // Pause between each download to prevent browser crashing or rate limits
   // Increased to 4 seconds to give Salesforce's backend time to dispatch the file
-  const DELAY_BETWEEN_DOWNLOADS_MS = 4000;
+  const DELAY_BETWEEN_DOWNLOADS_MS = 500;
 
   // Maximum time to wait for the menu to appear after clicking the dropdown
-  const MAX_WAIT_FOR_MENU_MS = 3000; // 3 seconds
+  const MAX_WAIT_FOR_MENU_MS = 500; // 3 seconds
 
   // The exact text (or partial text) of the download button inside the menu
   const DOWNLOAD_BUTTON_TEXT = "Download as CSV File";
