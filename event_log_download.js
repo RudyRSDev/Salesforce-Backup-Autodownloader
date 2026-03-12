@@ -16,6 +16,46 @@
   const clickedDownloadLinks = new Set();
 
   // ==========================================
+  // POPUP BLOCKER BYPASS / INTERCEPTOR
+  // ==========================================
+  // Work environments often block popups (window.open).
+  // This intercepts Salesforce's attempt to open a new tab and forces it to download in the current window.
+  const originalWindowOpen = window.open;
+  window.open = function (url, target, features) {
+    console.log(
+      `⚡ [Interceptor] Caught attempt to open popup for URL: ${url}`,
+    );
+
+    // Create a hidden link and click it to trigger a native download in the same tab
+    const hiddenLink = document.createElement("a");
+    hiddenLink.href = url;
+    hiddenLink.download = ""; // Triggers download behavior
+    hiddenLink.target = "_self"; // Ensure it doesn't try to pop up
+
+    document.body.appendChild(hiddenLink);
+    hiddenLink.click();
+    document.body.removeChild(hiddenLink);
+
+    // Return a dummy object to prevent Salesforce's internal scripts from throwing errors
+    // if they try to call methods on the new window object they thought they created.
+    return { focus: () => {}, close: () => {}, closed: false };
+  };
+
+  // Catch any dynamic forms trying to submit to a new tab and force them into the current tab
+  window.addEventListener(
+    "submit",
+    (e) => {
+      if (e.target && e.target.getAttribute("target") === "_blank") {
+        console.log(
+          `⚡ [Interceptor] Forcing dynamic form to submit in current tab instead of popup.`,
+        );
+        e.target.setAttribute("target", "_self");
+      }
+    },
+    true,
+  );
+
+  // ==========================================
   // HELPER FUNCTIONS
   // ==========================================
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
