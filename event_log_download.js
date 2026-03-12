@@ -52,10 +52,15 @@
   console.log("Starting Salesforce Event Log Downloader...");
 
   // Step 1: Find all the dropdown buttons, strictly restricted to the table area.
-  // By looking only inside 'table', '.slds-table', or 'lightning-datatable',
-  // we completely avoid clicking menus in the Salesforce top navbar.
+  // We added the specific custom element <setup_platformservices_eventmonitoring-table>
+  // to ensure it finds the table on your specific Salesforce page.
   let dropdownButtons = document.querySelectorAll(
-    "table lightning-button-menu button, " +
+    "setup_platformservices_eventmonitoring-table lightning-button-menu button, " +
+      'setup_platformservices_eventmonitoring-table button[title="Show actions"], ' +
+      'setup_platformservices_eventmonitoring-table button[title="Show Actions"], ' +
+      "setup_platformservices_eventmonitoring-table table tbody tr td:last-child button, " +
+      "setup_platformservices_eventmonitoring-table .slds-dropdown-trigger button, " +
+      "table lightning-button-menu button, " +
       ".slds-table lightning-button-menu button, " +
       "lightning-datatable lightning-button-menu button, " +
       'table button[title="Show actions"], ' +
