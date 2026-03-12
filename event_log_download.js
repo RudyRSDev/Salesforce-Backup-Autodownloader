@@ -3,13 +3,17 @@
   // CONFIGURATION
   // ==========================================
   // Pause between each download to prevent browser crashing or rate limits
-  const DELAY_BETWEEN_DOWNLOADS_MS = 2500; // 2.5 seconds
+  // Increased to 4 seconds to give Salesforce's backend time to dispatch the file
+  const DELAY_BETWEEN_DOWNLOADS_MS = 4000;
 
   // Maximum time to wait for the menu to appear after clicking the dropdown
   const MAX_WAIT_FOR_MENU_MS = 3000; // 3 seconds
 
   // The exact text (or partial text) of the download button inside the menu
   const DOWNLOAD_BUTTON_TEXT = "Download as CSV File";
+
+  // Track clicked links so we don't accidentally click Row 1's link multiple times
+  const clickedDownloadLinks = new Set();
 
   // ==========================================
   // HELPER FUNCTIONS
@@ -52,7 +56,10 @@
         const rect = el.getBoundingClientRect();
         const isVisible = rect.width > 0 && rect.height > 0;
 
-        return hasText && isVisible;
+        // Ensure we haven't already clicked this specific DOM element
+        const notClickedYet = !clickedDownloadLinks.has(el);
+
+        return hasText && isVisible && notClickedYet;
       });
 
       if (targetBtn) {
@@ -116,6 +123,9 @@
       );
 
       if (downloadBtn) {
+        // Register this element so we NEVER click it again on the next loop
+        clickedDownloadLinks.add(downloadBtn);
+
         // 4. Click the download button
         downloadBtn.click();
         console.log(
