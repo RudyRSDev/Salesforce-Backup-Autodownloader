@@ -5,8 +5,8 @@
   // Pause between each download to prevent browser crashing or rate limits
   const DELAY_BETWEEN_DOWNLOADS_MS = 2500; // 2.5 seconds
 
-  // Pause to allow the Salesforce dropdown menu to render after clicking it
-  const WAIT_FOR_MENU_MS = 500; // 0.5 seconds
+  // Maximum time to wait for the menu to appear after clicking the dropdown
+  const MAX_WAIT_FOR_MENU_MS = 3000; // 3 seconds
 
   // The exact text (or partial text) of the download button inside the menu
   const DOWNLOAD_BUTTON_TEXT = "Download as CSV File";
@@ -16,21 +16,34 @@
   // ==========================================
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Function to find the download link inside the opened menu
-  const findDownloadButton = (text) => {
-    // Look specifically for the Salesforce dropdown structure from your HTML
-    const elements = Array.from(
-      document.querySelectorAll(
-        '.slds-dropdown a[role="menuitem"], lightning-menu-item a',
-      ),
-    );
+  // Function to dynamically wait and find the download link inside the opened menu
+  const waitForDownloadButton = async (text, timeout) => {
+    const startTime = Date.now();
 
-    return elements.find((el) => {
-      const hasText = el.textContent.trim().includes(text);
-      // Ensure we are grabbing the visible menu, not a hidden one left in the DOM
-      const isVisible = el.offsetParent !== null || el.offsetWidth > 0;
-      return hasText && isVisible;
-    });
+    while (Date.now() - startTime < timeout) {
+      // Grab any anchor tag inside a dropdown or menu item
+      const elements = Array.from(
+        document.querySelectorAll('a[role="menuitem"], lightning-menu-item a'),
+      );
+
+      const targetBtn = elements.find((el) => {
+        const hasText = el.textContent.trim().includes(text);
+        // A more reliable visibility check for floating Salesforce menus
+        const rect = el.getBoundingClientRect();
+        const isVisible = rect.width > 0 && rect.height > 0;
+
+        return hasText && isVisible;
+      });
+
+      if (targetBtn) {
+        return targetBtn; // Found it!
+      }
+
+      // Wait 100ms before checking again
+      await sleep(100);
+    }
+
+    return null; // Timed out
   };
 
   // ==========================================
@@ -78,11 +91,11 @@
         `[${i + 1}/${dropdownButtons.length}] Opened dropdown menu...`,
       );
 
-      // 2. Wait a brief moment for the DOM to render the menu items
-      await sleep(WAIT_FOR_MENU_MS);
-
-      // 3. Find the "Download as CSV File" button inside the newly opened menu
-      const downloadBtn = findDownloadButton(DOWNLOAD_BUTTON_TEXT);
+      // 2 & 3. Wait dynamically for the "Download as CSV File" button to appear
+      const downloadBtn = await waitForDownloadButton(
+        DOWNLOAD_BUTTON_TEXT,
+        MAX_WAIT_FOR_MENU_MS,
+      );
 
       if (downloadBtn) {
         // 4. Click the download button
