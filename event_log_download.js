@@ -16,14 +16,34 @@
   // ==========================================
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+  // Helper to pierce through Salesforce's LWC Shadow DOM boundaries
+  const deepQuerySelectorAll = (selector, root = document) => {
+    const results = [];
+    const traverse = (node) => {
+      if (!node || !node.querySelectorAll) return;
+
+      // Find matches in the current DOM scope
+      const matches = node.querySelectorAll(selector);
+      if (matches.length > 0) results.push(...matches);
+
+      // Check all children to see if they have a Shadow DOM, and traverse into them
+      const allElements = node.querySelectorAll("*");
+      for (const el of allElements) {
+        if (el.shadowRoot) traverse(el.shadowRoot);
+      }
+    };
+    traverse(root);
+    return [...new Set(results)]; // Remove duplicates
+  };
+
   // Function to dynamically wait and find the download link inside the opened menu
   const waitForDownloadButton = async (text, timeout) => {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
-      // Grab any anchor tag inside a dropdown or menu item
-      const elements = Array.from(
-        document.querySelectorAll('a[role="menuitem"], lightning-menu-item a'),
+      // Grab any anchor tag by piercing through all shadow DOMs
+      const elements = deepQuerySelectorAll(
+        'a[role="menuitem"], lightning-menu-item a',
       );
 
       const targetBtn = elements.find((el) => {
@@ -51,34 +71,23 @@
   // ==========================================
   console.log("Starting Salesforce Event Log Downloader...");
 
-  // Step 1: Find all the dropdown buttons, strictly restricted to the table area.
-  // We added the specific custom element <lightning-primitive-cell-actions>
-  // to match the exact HTML structure you provided for the table cell.
-  let dropdownButtons = document.querySelectorAll(
-    "lightning-primitive-cell-actions lightning-button-menu button, " +
-      'td[role="gridcell"] lightning-button-menu button, ' +
-      "setup_platformservices_eventmonitoring-table lightning-button-menu button, " +
-      'setup_platformservices_eventmonitoring-table button[title="Show actions"], ' +
-      'setup_platformservices_eventmonitoring-table button[title="Show Actions"], ' +
-      "setup_platformservices_eventmonitoring-table table tbody tr td:last-child button, " +
-      "setup_platformservices_eventmonitoring-table .slds-dropdown-trigger button, " +
-      "table lightning-button-menu button, " +
-      ".slds-table lightning-button-menu button, " +
-      "lightning-datatable lightning-button-menu button, " +
-      'table button[title="Show actions"], ' +
-      '.slds-table button[title="Show actions"], ' +
-      'lightning-datatable button[title="Show actions"], ' +
-      "table tbody tr td:last-child button",
+  // Step 1: Find all the dropdown buttons by penetrating the Shadow DOM.
+  // Salesforce's Lightning Datatable hides its contents inside a Shadow DOM,
+  // which normal document.querySelectorAll CANNOT see. Our deepQuerySelectorAll fixes this.
+  let dropdownButtons = deepQuerySelectorAll(
+    "lightning-primitive-cell-actions button, lightning-primitive-cell-actions lightning-button-menu button",
   );
 
-  // Filter out buttons that are clearly not dropdowns (optional, but helps accuracy)
-  dropdownButtons = Array.from(dropdownButtons).filter(
-    (btn) => btn.offsetHeight > 0,
-  );
+  // Filter out buttons that are clearly not visible
+  dropdownButtons = Array.from(dropdownButtons).filter((btn) => {
+    const rect = btn.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
 
   if (dropdownButtons.length === 0) {
-    console.error(
-      "❌ Could not find any dropdown menu buttons in the table. You may need to update the CSS selector in the script based on your specific Salesforce page.",
+    console.error("❌ Could not find any dropdown menu buttons in the table.");
+    console.warn(
+      "👉 TROUBLESHOOTING: You might be inside an iframe! Look at the top of your Chrome DevTools Console. There is a dropdown that usually says 'top'. Click it and change it to the Salesforce iframe, then run the script again.",
     );
     return;
   }
