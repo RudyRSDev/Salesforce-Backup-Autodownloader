@@ -51,15 +51,17 @@
   // ==========================================
   console.log("Starting Salesforce Event Log Downloader...");
 
-  // Step 1: Find all the dropdown buttons.
-  // In Salesforce Lightning, action menus are often within a 'lightning-button-menu'
-  // or are buttons with a specific 'Show More' / 'Show Actions' title.
-  // We try a few common Salesforce CSS selectors here:
+  // Step 1: Find all the dropdown buttons, strictly restricted to the table area.
+  // By looking only inside 'table', '.slds-table', or 'lightning-datatable',
+  // we completely avoid clicking menus in the Salesforce top navbar.
   let dropdownButtons = document.querySelectorAll(
-    "table tbody tr td:last-child button, " +
-      "lightning-button-menu button, " +
-      'button[title="Show actions"], ' +
-      ".slds-dropdown-trigger button",
+    "table lightning-button-menu button, " +
+      ".slds-table lightning-button-menu button, " +
+      "lightning-datatable lightning-button-menu button, " +
+      'table button[title="Show actions"], ' +
+      '.slds-table button[title="Show actions"], ' +
+      'lightning-datatable button[title="Show actions"], ' +
+      "table tbody tr td:last-child button",
   );
 
   // Filter out buttons that are clearly not dropdowns (optional, but helps accuracy)
@@ -69,13 +71,13 @@
 
   if (dropdownButtons.length === 0) {
     console.error(
-      "❌ Could not find any dropdown menu buttons. You may need to update the CSS selector in the script based on your specific Salesforce page.",
+      "❌ Could not find any dropdown menu buttons in the table. You may need to update the CSS selector in the script based on your specific Salesforce page.",
     );
     return;
   }
 
   console.log(
-    `Found ${dropdownButtons.length} potential dropdown menus. Beginning processing...`,
+    `Found ${dropdownButtons.length} potential dropdown menus in the table. Beginning processing...`,
   );
 
   let successCount = 0;
