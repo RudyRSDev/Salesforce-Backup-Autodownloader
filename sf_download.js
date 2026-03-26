@@ -34,22 +34,34 @@ if (totalFiles === 0) {
     "❌ No URLs extracted. Make sure you are in the correct frame.",
   );
 } else {
-  // --- 3. EXACT RESUME LOGIC (Advances by +1) ---
+  // --- 3. CRASH RECOVERY RESUME LOGIC ---
   const STORAGE_KEY = "sf_export_resume_index";
   let startIndex = 0;
   const savedIndex = localStorage.getItem(STORAGE_KEY);
 
   if (savedIndex !== null) {
-    const nextIndex = parseInt(savedIndex) + 1;
+    const lastRequested = parseInt(savedIndex);
 
-    if (nextIndex < totalFiles) {
-      const wantsResume = confirm(
-        `🛑 Previous session found!\n\nThe last file requested was File ${parseInt(savedIndex) + 1}.\n\nDo you want to resume with File ${nextIndex + 1} of ${totalFiles}?`,
+    if (lastRequested < totalFiles) {
+      // New Crash Recovery Prompt
+      const recoverCrash = confirm(
+        `🛑 Previous session found!\n\n` +
+          `The last file requested was File ${lastRequested + 1}.\n\n` +
+          `⚠️ IF THE VM REBOOTED: This file is likely a corrupted '.crdownload'.\n\n` +
+          `• Click "OK" to RE-DOWNLOAD File ${lastRequested + 1} and fix the error.\n` +
+          `• Click "Cancel" to skip it and move to File ${lastRequested + 2}.`,
       );
-      if (wantsResume) {
-        startIndex = nextIndex;
+
+      if (recoverCrash) {
+        startIndex = lastRequested; // Re-run the broken file
       } else {
-        localStorage.removeItem(STORAGE_KEY);
+        startIndex = lastRequested + 1; // Advance normally
+
+        // If they cancelled and the next index is out of bounds, clear it
+        if (startIndex >= totalFiles) {
+          localStorage.removeItem(STORAGE_KEY);
+          startIndex = 0;
+        }
       }
     } else {
       localStorage.removeItem(STORAGE_KEY);
@@ -106,10 +118,7 @@ if (totalFiles === 0) {
         const totalTicks = 121; // 121 ticks of 500ms = 60.5 seconds
 
         for (let tick = totalTicks; tick > 0; tick--) {
-          // Calculate remaining seconds with 1 decimal place
           const secRemaining = (tick / 2).toFixed(1);
-
-          // Calculate progress bar
           const completed = Math.floor(((totalTicks - tick) / totalTicks) * 30);
           const progressBars =
             "█".repeat(completed) + "░".repeat(30 - completed);
