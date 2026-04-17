@@ -99,6 +99,32 @@
       'position:fixed; bottom:24px; right:24px; width:320px; background:#ffffff; color:#1f2937; padding:20px; border-radius:1rem; z-index:999999; font-family:ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border:1px solid #e5e7eb; transition:all 0.3s ease;';
     document.body.appendChild(uiBox);
 
+    // Inject custom CSS to override Salesforce's aggressive button styling and add hover states
+    if (!document.getElementById("sf-dl-styles")) {
+      const style = document.createElement("style");
+      style.id = "sf-dl-styles";
+      style.innerHTML = `
+                #sf-stop-btn {
+                    background-color: #ef4444 !important;
+                    background-image: none !important;
+                    color: #ffffff !important;
+                    padding: 0.375rem 0.75rem !important;
+                    border-radius: 0.375rem !important;
+                    font-size: 0.75rem !important;
+                    font-weight: 600 !important;
+                    border: none !important;
+                    cursor: pointer !important;
+                    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+                    transition: background-color 0.2s ease !important;
+                    text-shadow: none !important;
+                }
+                #sf-stop-btn:hover {
+                    background-color: #dc2626 !important;
+                }
+            `;
+      document.head.appendChild(style);
+    }
+
     // Add event delegation for the new stop button
     uiBox.addEventListener("click", (e) => {
       if (e.target.id === "sf-stop-btn") {
@@ -174,7 +200,7 @@
                                     Cooldown... (${secRemaining}s remaining)
                                 </div>
                             </div>
-                            <button id="sf-stop-btn" style="background-color: #ef4444; color: #ffffff; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: opacity 0.2s;">Stop</button>
+                            <button id="sf-stop-btn">Stop</button>
                         </div>
                         <div style="width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.75rem; overflow: hidden;">
                             <div style="background-color: #22c55e; height: 100%; border-radius: 9999px; width: ${percent}%; transition: width 0.5s linear;"></div>
