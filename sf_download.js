@@ -98,7 +98,17 @@
     uiBox.style.cssText =
       'position:fixed; bottom:24px; right:24px; width:320px; background:#ffffff; color:#1f2937; padding:20px; border-radius:1rem; z-index:999999; font-family:ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border:1px solid #e5e7eb; transition:all 0.3s ease;';
     document.body.appendChild(uiBox);
+
+    // Add event delegation for the new stop button
+    uiBox.addEventListener("click", (e) => {
+      if (e.target.id === "sf-stop-btn") {
+        window.sfExporterStopped = true;
+      }
+    });
   }
+
+  // Reset flag when starting a new run
+  window.sfExporterStopped = false;
 
   // --- 5. MASTER IFRAME (RAM Saver) ---
   let masterFrame = document.getElementById("sf-master-dl-frame");
@@ -113,8 +123,13 @@
   const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
   (async function startDownloading() {
+    let lastFileProcessed = startIndex;
+
     for (let i = startIndex; i < totalFiles; i++) {
+      if (window.sfExporterStopped) break;
+
       const fileNumber = i + 1;
+      lastFileProcessed = fileNumber;
 
       // Save state (the current file being processed)
       localStorage.setItem(STORAGE_KEY, i);
@@ -140,6 +155,8 @@
         const totalTicks = 121; // 121 ticks of 500ms = 60.5 seconds
 
         for (let tick = totalTicks; tick > 0; tick--) {
+          if (window.sfExporterStopped) break;
+
           const secRemaining = (tick / 2).toFixed(1);
           const percent = (((totalTicks - tick) / totalTicks) * 100).toFixed(1);
 
@@ -148,11 +165,16 @@
                             <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">🚀 SF Exporter</div>
                             <div style="font-size: 0.875rem; font-weight: 600; color: #22c55e;">${percent}%</div>
                         </div>
-                        <div style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem;">
-                            File <b>${fileNumber}</b> of <b>${totalFiles}</b>
-                        </div>
-                        <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 1rem;">
-                            Cooldown... (${secRemaining}s remaining)
+                        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem;">
+                                    File <b>${fileNumber}</b> of <b>${totalFiles}</b>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">
+                                    Cooldown... (${secRemaining}s remaining)
+                                </div>
+                            </div>
+                            <button id="sf-stop-btn" style="background-color: #ef4444; color: #ffffff; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: opacity 0.2s;">Stop</button>
                         </div>
                         <div style="width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.75rem; overflow: hidden;">
                             <div style="background-color: #22c55e; height: 100%; border-radius: 9999px; width: ${percent}%; transition: width 0.5s linear;"></div>
@@ -164,14 +186,25 @@
       }
     }
 
-    uiBox.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <svg style="width: 1.5rem; height: 1.5rem; color: #22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">All Downloads Triggered!</div>
-            </div>
-            <div style="font-size: 0.875rem; color: #4b5563; margin-top: 0.5rem;">${totalFiles} files processed.</div>
-        `;
-    localStorage.removeItem(STORAGE_KEY);
-    console.log(`🏁 All downloads complete!`);
+    if (window.sfExporterStopped) {
+      uiBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg style="width: 1.5rem; height: 1.5rem; color: #ef4444;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">Export Stopped</div>
+                </div>
+                <div style="font-size: 0.875rem; color: #4b5563; margin-top: 0.5rem;">Stopped at file ${lastFileProcessed}. Progress saved.</div>
+            `;
+      console.log(`🛑 Export manually stopped. You can resume later.`);
+    } else {
+      uiBox.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <svg style="width: 1.5rem; height: 1.5rem; color: #22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">All Downloads Triggered!</div>
+                </div>
+                <div style="font-size: 0.875rem; color: #4b5563; margin-top: 0.5rem;">${totalFiles} files processed.</div>
+            `;
+      localStorage.removeItem(STORAGE_KEY);
+      console.log(`🏁 All downloads complete!`);
+    }
   })();
 })();
