@@ -1,40 +1,46 @@
-// 1. Find the download links using the specific class from your HTML
-const downloadLinks = Array.from(
-  document.querySelectorAll("a.actionLink"),
-).filter((link) => link.innerText.toLowerCase().trim() === "download");
+(function () {
+  // 1. Find the download links using the specific class from your HTML
+  const downloadLinks = Array.from(
+    document.querySelectorAll("a.actionLink"),
+  ).filter((link) => link.innerText.toLowerCase().trim() === "download");
 
-const actualUrls = [];
+  const actualUrls = [];
 
-// 2. Decode and extract the raw download paths
-downloadLinks.forEach((link) => {
-  let href = link.getAttribute("href") || "";
-  if (href.includes("srcUp")) {
-    let match = href.match(/srcUp\(([^)]+)\)/);
-    if (match && match[1]) {
-      let decodedUrl = decodeURIComponent(match[1]).replace(/^['"]|['"]$/g, "");
-      actualUrls.push(decodedUrl);
+  // 2. Decode and extract the raw download paths
+  downloadLinks.forEach((link) => {
+    let href = link.getAttribute("href") || "";
+    if (href.includes("srcUp")) {
+      let match = href.match(/srcUp\(([^)]+)\)/);
+      if (match && match[1]) {
+        let decodedUrl = decodeURIComponent(match[1]).replace(
+          /^['"]|['"]$/g,
+          "",
+        );
+        actualUrls.push(decodedUrl);
+      }
+    } else if (href.includes("servlet.OrgExport")) {
+      let startIdx = href.indexOf("/servlet/");
+      if (startIdx !== -1) {
+        actualUrls.push(href.substring(startIdx));
+      } else {
+        actualUrls.push(href);
+      }
     }
-  } else if (href.includes("servlet.OrgExport")) {
-    let startIdx = href.indexOf("/servlet/");
-    if (startIdx !== -1) {
-      actualUrls.push(href.substring(startIdx));
-    } else {
-      actualUrls.push(href);
-    }
-  }
-});
+  });
 
-const finalUrls = actualUrls.map(
-  (url) => new URL(url, window.location.origin).href,
-);
-const totalFiles = finalUrls.length;
-
-if (totalFiles === 0) {
-  console.error(
-    "❌ No URLs extracted. Make sure you are in the correct frame.",
+  const finalUrls = actualUrls.map(
+    (url) => new URL(url, window.location.origin).href,
   );
-} else {
-  // --- 3. CRASH RECOVERY RESUME LOGIC ---
+  const totalFiles = finalUrls.length;
+
+  if (totalFiles === 0) {
+    console.error(
+      "❌ No URLs extracted. Make sure you are in the correct frame.",
+    );
+    return; // Stop execution
+  }
+
+  // --- 3. 3-OPTION RESUME LOGIC ---
   const STORAGE_KEY = "sf_export_resume_index";
   let startIndex = 0;
   const savedIndex = localStorage.getItem(STORAGE_KEY);
@@ -43,38 +49,54 @@ if (totalFiles === 0) {
     const lastRequested = parseInt(savedIndex);
 
     if (lastRequested < totalFiles) {
-      // New Crash Recovery Prompt
-      const recoverCrash = confirm(
-        `🛑 Previous session found!\n\n` +
+      // New 3-Option Prompt
+      const choice = prompt(
+        `🛑 Previous session found!\n` +
           `The last file requested was File ${lastRequested + 1}.\n\n` +
-          `⚠️ IF THE VM REBOOTED: This file is likely a corrupted '.crdownload'.\n\n` +
-          `• Click "OK" to RE-DOWNLOAD File ${lastRequested + 1} and fix the error.\n` +
-          `• Click "Cancel" to skip it and move to File ${lastRequested + 2}.`,
+          `Type the NUMBER of your choice and click OK:\n\n` +
+          `[1] RE-DOWNLOAD File ${lastRequested + 1} (Fixes .crdownload crash)\n` +
+          `[2] ADVANCE to File ${lastRequested + 2} (Skip the last one)\n` +
+          `[3] RESTART from File 1 (Clear all progress)`,
       );
 
-      if (recoverCrash) {
-        startIndex = lastRequested; // Re-run the broken file
-      } else {
-        startIndex = lastRequested + 1; // Advance normally
+      if (choice === "1") {
+        console.log(
+          `🔄 Option 1 Selected: Re-downloading File ${lastRequested + 1}...`,
+        );
+        startIndex = lastRequested;
+      } else if (choice === "2") {
+        console.log(
+          `⏭️ Option 2 Selected: Advancing to File ${lastRequested + 2}...`,
+        );
+        startIndex = lastRequested + 1;
 
-        // If they cancelled and the next index is out of bounds, clear it
+        // If they advanced past the final file, end the script
         if (startIndex >= totalFiles) {
+          console.log(`🏁 Advanced past the last file. Clearing save data.`);
           localStorage.removeItem(STORAGE_KEY);
-          startIndex = 0;
+          return;
         }
+      } else if (choice === "3") {
+        console.log(`⏮️ Option 3 Selected: Restarting from File 1...`);
+        startIndex = 0;
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        // If they hit Cancel or typed something else, abort safely
+        console.error("❌ Resume cancelled by user. Script aborted.");
+        return;
       }
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
   }
 
-  // --- 4. FLOATING UI SETUP ---
+  // --- 4. FLOATING UI SETUP (DaisyUI Light Theme) ---
   let uiBox = document.getElementById("sf-dl-tracker");
   if (!uiBox) {
     uiBox = document.createElement("div");
     uiBox.id = "sf-dl-tracker";
     uiBox.style.cssText =
-      "position:fixed; bottom:20px; right:20px; width:300px; background:#16325c; color:white; padding:15px; border-radius:8px; z-index:999999; font-family:sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid #0070d2;";
+      'position:fixed; bottom:24px; right:24px; width:320px; background:#ffffff; color:#1f2937; padding:20px; border-radius:1rem; z-index:999999; font-family:ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); border:1px solid #e5e7eb; transition:all 0.3s ease;';
     document.body.appendChild(uiBox);
   }
 
@@ -119,15 +141,22 @@ if (totalFiles === 0) {
 
         for (let tick = totalTicks; tick > 0; tick--) {
           const secRemaining = (tick / 2).toFixed(1);
-          const completed = Math.floor(((totalTicks - tick) / totalTicks) * 30);
-          const progressBars =
-            "█".repeat(completed) + "░".repeat(30 - completed);
+          const percent = (((totalTicks - tick) / totalTicks) * 100).toFixed(1);
 
           uiBox.innerHTML = `
-                        <div style="font-weight:bold; margin-bottom:8px;">🚀 SF Precision Exporter</div>
-                        <div style="margin-bottom:5px;">File: <b>${fileNumber}</b> of ${totalFiles}</div>
-                        <div style="font-size:12px; margin-bottom:5px; color:#c9c7c5;">Cooldown... (${secRemaining}s)</div>
-                        <div style="font-family:monospace; font-size:12px; letter-spacing:1px; color:#4bca81;">${progressBars}</div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                            <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">🚀 SF Exporter</div>
+                            <div style="font-size: 0.875rem; font-weight: 600; color: #22c55e;">${percent}%</div>
+                        </div>
+                        <div style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem;">
+                            File <b>${fileNumber}</b> of <b>${totalFiles}</b>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 1rem;">
+                            Cooldown... (${secRemaining}s remaining)
+                        </div>
+                        <div style="width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.75rem; overflow: hidden;">
+                            <div style="background-color: #22c55e; height: 100%; border-radius: 9999px; width: ${percent}%; transition: width 0.5s linear;"></div>
+                        </div>
                     `;
 
           await wait(500); // 500ms tick
@@ -135,8 +164,14 @@ if (totalFiles === 0) {
       }
     }
 
-    uiBox.innerHTML = `<div style="font-weight:bold; color:#4bca81;">✅ All ${totalFiles} Downloads Triggered!</div>`;
+    uiBox.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg style="width: 1.5rem; height: 1.5rem; color: #22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <div style="font-weight: 700; font-size: 1.125rem; color: #111827;">All Downloads Triggered!</div>
+            </div>
+            <div style="font-size: 0.875rem; color: #4b5563; margin-top: 0.5rem;">${totalFiles} files processed.</div>
+        `;
     localStorage.removeItem(STORAGE_KEY);
     console.log(`🏁 All downloads complete!`);
   })();
-}
+})();
