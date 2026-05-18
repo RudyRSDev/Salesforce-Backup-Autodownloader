@@ -16,7 +16,7 @@
   // ==========================================
   // DAISY UI STYLE TRACKER (CSS INJECTION)
   // ==========================================
-  const injectUI = () => {
+  const injectUI = (totalDownloads) => {
     const style = document.createElement("style");
     style.innerHTML = `
             #sfdc-dl-tracker {
@@ -39,17 +39,19 @@
             }
             #sfdc-dl-btn-stop:hover { background-color: #dc2626; }
             #sfdc-dl-progress-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.5rem; margin-bottom: 1rem; overflow: hidden; }
-            #sfdc-dl-progress-bar { background-color: #4f46e5; height: 100%; width: 100%; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-            @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+            #sfdc-dl-progress-bar { background-color: #4f46e5; height: 100%; width: 0%; transition: width 0.3s ease; }
         `;
     document.head.appendChild(style);
 
     const container = document.createElement("div");
     container.id = "sfdc-dl-tracker";
     container.innerHTML = `
-            <h3>📥 Event Log Downloader</h3>
-            <div class="stat-val" id="sfdc-dl-count">0</div>
-            <div class="stat-desc">Files Downloaded</div>
+            <h3>🛡️ Event Log File Export</h3>
+            <div class="stat-val" id="sfdc-dl-count">0 / ${totalDownloads}</div>
+            <div class="stat-desc" style="display: flex; justify-content: space-between;">
+                <span>Files Downloaded</span>
+                <span id="sfdc-dl-eta" style="color: #4f46e5; font-weight: 600;">Est: --</span>
+            </div>
             <div id="sfdc-dl-progress-container"><div id="sfdc-dl-progress-bar"></div></div>
             <div class="log-box" id="sfdc-dl-log">Initializing...<br></div>
             <button id="sfdc-dl-btn-stop">Stop Script</button>
@@ -64,8 +66,6 @@
         document.getElementById("sfdc-dl-btn-stop").innerText = "Stopping...";
         document.getElementById("sfdc-dl-btn-stop").style.backgroundColor =
           "#9ca3af";
-        document.getElementById("sfdc-dl-progress-bar").style.animation =
-          "none";
       });
   };
 
@@ -77,22 +77,57 @@
     }
   };
 
-  const updateCountUI = (count) => {
+  const formatETA = (ms) => {
+    if (!ms || ms < 0 || !isFinite(ms)) return "--";
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes === 0) return `${seconds}s`;
+    return `${minutes}m ${seconds}s`;
+  };
+
+  const updateCountUI = (count, total, startTime) => {
     const countEl = document.getElementById("sfdc-dl-count");
-    if (countEl) countEl.innerText = count;
+    if (countEl) countEl.innerText = `${count} / ${total}`;
+
+    const pBar = document.getElementById("sfdc-dl-progress-bar");
+    if (pBar) {
+      const percentage = Math.min((count / total) * 100, 100);
+      pBar.style.width = `${percentage}%`;
+    }
+
+    const etaEl = document.getElementById("sfdc-dl-eta");
+    if (etaEl) {
+      if (count > 0 && startTime) {
+        // Dynamically calculate based on real elapsed time
+        const elapsed = Date.now() - startTime;
+        const timePerFile = elapsed / count;
+        const remainingFiles = total - count;
+        etaEl.innerText = `Est: ${formatETA(timePerFile * remainingFiles)}`;
+      } else {
+        // Static estimate before the first download finishes (Delays + ~500ms for UI/Clicks)
+        const estimatedTimePerFile = DELAY_BETWEEN_DOWNLOADS_MS + 500;
+        etaEl.innerText = `Est: ${formatETA(estimatedTimePerFile * total)}`;
+      }
+    }
   };
 
   const finishUI = () => {
     const pBar = document.getElementById("sfdc-dl-progress-bar");
     const btn = document.getElementById("sfdc-dl-btn-stop");
+    const etaEl = document.getElementById("sfdc-dl-eta");
     if (pBar) {
-      pBar.style.animation = "none";
+      pBar.style.width = "100%";
       pBar.style.backgroundColor = "#10b981";
     }
     if (btn) {
       btn.innerText = "Done";
       btn.style.backgroundColor = "#10b981";
       btn.disabled = true;
+    }
+    if (etaEl) {
+      etaEl.innerText = "Done";
+      etaEl.style.color = "#10b981";
     }
   };
 
@@ -206,10 +241,48 @@
   // ==========================================
   // MAIN EXECUTION LOOP (VIRTUAL SCROLLING SAFE)
   // ==========================================
-  injectUI();
-  logToUI("🚀 Starting mass download...");
+  console.log("Starting Salesforce Event Log Downloader...");
+
+  // Auto-detect total downloads from the Salesforce UI text (e.g., "1227 events")
+  let totalDownloads = null;
+  const textElements = deepQuerySelectorAll(
+    'lightning-formatted-rich-text span, span[part="formatted-rich-text"]',
+  );
+
+  for (const el of textElements) {
+    const text = el.textContent || "";
+    if (text.toLowerCase().includes("events")) {
+      // Extracts numbers even if formatted with commas (e.g., "1,227 events")
+      const match = text.match(/(\d+(?:,\d+)?)\s*events/i);
+      if (match && match[1]) {
+        totalDownloads = parseInt(match[1].replace(/,/g, ""), 10);
+        console.log(
+          `✅ Auto-detected total downloads from page: ${totalDownloads}`,
+        );
+        break;
+      }
+    }
+  }
+
+  // Fallback to prompt if the UI changed and we couldn't find the text
+  if (!totalDownloads) {
+    const userInput = prompt(
+      "Could not auto-detect file count. How many total files are you downloading?",
+      "1500",
+    );
+    totalDownloads = parseInt(userInput, 10) || 1500;
+  }
+
+  const TOTAL_EXPECTED_DOWNLOADS = totalDownloads;
+
+  injectUI(TOTAL_EXPECTED_DOWNLOADS);
+  logToUI(`🚀 Starting mass download of ${TOTAL_EXPECTED_DOWNLOADS} files...`);
+
+  // Seed the UI with the initial static ETA before the loop starts
+  updateCountUI(0, TOTAL_EXPECTED_DOWNLOADS, null);
 
   let consecutiveScrollsWithoutNewRows = 0;
+  const scriptStartTime = Date.now();
 
   while (isRunning && consecutiveScrollsWithoutNewRows < 4) {
     let allDropdownButtons = deepQuerySelectorAll(
@@ -272,7 +345,11 @@
           successCount++;
           processedRowSignatures.add(item.sig);
 
-          updateCountUI(successCount);
+          updateCountUI(
+            successCount,
+            TOTAL_EXPECTED_DOWNLOADS,
+            scriptStartTime,
+          );
           logToUI(`✅ Triggered download (${successCount})`);
         } else {
           errorCount++;
