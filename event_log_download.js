@@ -27,19 +27,15 @@
                 width: 320px; border: 1px solid #e5e7eb; color: #1f2937;
             }
             #sfdc-dl-tracker h3 { margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 700; color: #111827; }
-            #sfdc-dl-tracker .stat-val { font-size: 2.25rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; color: #4f46e5; }
-            #sfdc-dl-tracker .stat-desc { font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem; }
-            #sfdc-dl-tracker .log-box {
-                font-size: 0.75rem; background: #f3f4f6; padding: 0.5rem; border-radius: 0.5rem;
-                height: 60px; overflow-y: auto; margin-bottom: 1rem; color: #374151; font-family: monospace;
-            }
+            #sfdc-dl-tracker .stat-val { font-size: 2.25rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; color: #10b981; }
+            #sfdc-dl-tracker .stat-desc { font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; }
             #sfdc-dl-btn-stop {
                 width: 100%; padding: 0.75rem; background-color: #ef4444; color: white;
                 border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s;
             }
             #sfdc-dl-btn-stop:hover { background-color: #dc2626; }
-            #sfdc-dl-progress-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.5rem; margin-bottom: 1rem; overflow: hidden; }
-            #sfdc-dl-progress-bar { background-color: #4f46e5; height: 100%; width: 0%; transition: width 0.3s ease; }
+            #sfdc-dl-progress-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.5rem; margin-bottom: 1.5rem; overflow: hidden; }
+            #sfdc-dl-progress-bar { background-color: #10b981; height: 100%; width: 0%; transition: width 0.3s ease; }
         `;
     document.head.appendChild(style);
 
@@ -50,10 +46,9 @@
             <div class="stat-val" id="sfdc-dl-count">0 / ${totalDownloads}</div>
             <div class="stat-desc" style="display: flex; justify-content: space-between;">
                 <span>Files Downloaded</span>
-                <span id="sfdc-dl-eta" style="color: #4f46e5; font-weight: 600;">Est: --</span>
+                <span id="sfdc-dl-eta" style="color: #10b981; font-weight: 600;">Est: --</span>
             </div>
             <div id="sfdc-dl-progress-container"><div id="sfdc-dl-progress-bar"></div></div>
-            <div class="log-box" id="sfdc-dl-log">Initializing...<br></div>
             <button id="sfdc-dl-btn-stop">Stop Script</button>
         `;
     document.body.appendChild(container);
@@ -70,11 +65,8 @@
   };
 
   const logToUI = (msg) => {
+    // Output to console only, keeping the visual UI clean
     console.log(msg);
-    const logBox = document.getElementById("sfdc-dl-log");
-    if (logBox) {
-      logBox.innerHTML = `> ${msg}<br>${logBox.innerHTML}`;
-    }
   };
 
   const formatETA = (ms) => {
@@ -118,7 +110,6 @@
     const etaEl = document.getElementById("sfdc-dl-eta");
     if (pBar) {
       pBar.style.width = "100%";
-      pBar.style.backgroundColor = "#10b981";
     }
     if (btn) {
       btn.innerText = "Done";
@@ -127,7 +118,6 @@
     }
     if (etaEl) {
       etaEl.innerText = "Done";
-      etaEl.style.color = "#10b981";
     }
   };
 
