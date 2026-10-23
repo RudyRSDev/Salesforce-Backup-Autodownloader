@@ -14,42 +14,50 @@
   let errorCount = 0;
 
   // ==========================================
-  // DAISY UI STYLE TRACKER (CSS INJECTION)
+  // DAISYUI-INSPIRED TRACKER (CSS INJECTION)
   // ==========================================
   const injectUI = (totalDownloads) => {
     const style = document.createElement("style");
-    style.innerHTML = `
+    style.textContent = `
             #sfdc-dl-tracker {
-                position: fixed; bottom: 24px; right: 24px; z-index: 999999;
-                background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-                border-radius: 1rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-                padding: 1.5rem; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                width: 320px; border: 1px solid #e5e7eb; color: #1f2937;
+                position:fixed;bottom:24px;right:24px;z-index:999999;box-sizing:border-box;
+                width:320px;padding:20px;background:#fff;color:#1f2937;
+                border:1px solid #d1d5db;border-radius:16px;
+                box-shadow:0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04);
+                font:14px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
             }
-            #sfdc-dl-tracker h3 { margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 700; color: #111827; }
-            #sfdc-dl-tracker .stat-val { font-size: 2.25rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; color: #10b981; }
-            #sfdc-dl-tracker .stat-desc { font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; }
-            #sfdc-dl-btn-stop {
-                width: 100%; padding: 0.75rem; background-color: #ef4444; color: white;
-                border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s;
-            }
-            #sfdc-dl-btn-stop:hover { background-color: #dc2626; }
-            #sfdc-dl-progress-container { width: 100%; background-color: #e5e7eb; border-radius: 9999px; height: 0.5rem; margin-bottom: 1.5rem; overflow: hidden; }
-            #sfdc-dl-progress-bar { background-color: #10b981; height: 100%; width: 0%; transition: width 0.3s ease; }
+            #sfdc-dl-tracker .sf-brand { display:flex;align-items:center;gap:10px;margin-bottom:14px; }
+            #sfdc-dl-tracker .sf-cloud-mark { display:block;flex:none;width:40px;height:32px; }
+            #sfdc-dl-tracker h3 { margin:0;font-size:17px;font-weight:700;color:#111827; }
+            #sfdc-dl-tracker .stat-val { margin-bottom:6px;font-size:32px;font-weight:800;line-height:1.1;color:#0176d3; }
+            #sfdc-dl-tracker .stat-desc { display:flex;justify-content:space-between;gap:8px;margin-bottom:16px;font-size:13px;color:#6b7280; }
+            #sfdc-dl-tracker #sfdc-dl-eta { color:#0176d3;font-weight:600; }
+            #sfdc-dl-tracker .sf-progress-container { width:100%;height:10px;margin-bottom:16px;overflow:hidden;border-radius:999px;background:#e5e7eb; }
+            #sfdc-dl-tracker #sfdc-dl-progress-bar { height:100%;width:0%;border-radius:inherit;background:#0176d3;transition:width .3s ease; }
+            #sfdc-dl-tracker .sf-actions { display:flex;justify-content:flex-end; }
+            #sfdc-dl-tracker .sf-btn { display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border:0;border-radius:8px;background:#dc2626!important;color:#fff!important;font:600 14px ui-sans-serif,system-ui,sans-serif;cursor:pointer;text-shadow:none!important; }
+            #sfdc-dl-tracker .sf-btn:hover { background:#b91c1c!important; }
+            #sfdc-dl-tracker .sf-btn.is-done { background:#0176d3!important; }
+            @media(max-width:480px) { #sfdc-dl-tracker { right:12px;bottom:12px;width:min(320px,calc(100vw - 24px)); } }
         `;
     document.head.appendChild(style);
 
     const container = document.createElement("div");
     container.id = "sfdc-dl-tracker";
     container.innerHTML = `
-            <h3>🛡️ Event Log File Export</h3>
-            <div class="stat-val" id="sfdc-dl-count">0 / ${totalDownloads}</div>
-            <div class="stat-desc" style="display: flex; justify-content: space-between;">
-                <span>Files Downloaded</span>
-                <span id="sfdc-dl-eta" style="color: #10b981; font-weight: 600;">Est: --</span>
+            <div class="sf-brand">
+                <svg class="sf-cloud-mark" viewBox="0 0 640 512" role="img" aria-label="Cloud">
+                    <path fill="#0176d3" d="M0 336c0 79.5 64.5 144 144 144h368c70.7 0 128-57.3 128-128 0-61.9-44-113.6-102.4-125.4 4.1-10.7 6.4-22.4 6.4-34.6 0-53-43-96-96-96-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32 167.6 32 96 103.6 96 192c0 2.7.1 5.4.2 8.1C40.2 219.8 0 273.2 0 336z"/>
+                </svg>
+                <h3>Event Log Export</h3>
             </div>
-            <div id="sfdc-dl-progress-container"><div id="sfdc-dl-progress-bar"></div></div>
-            <button id="sfdc-dl-btn-stop">Stop Script</button>
+            <div class="stat-val" id="sfdc-dl-count">0 / ${totalDownloads}</div>
+            <div class="stat-desc">
+                <span>Files Downloaded</span>
+                <span id="sfdc-dl-eta">Est: --</span>
+            </div>
+            <div class="sf-progress-container" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="sfdc-dl-progress-bar"></div></div>
+            <div class="sf-actions"><button class="sf-btn" id="sfdc-dl-btn-stop">Stop</button></div>
         `;
     document.body.appendChild(container);
 
@@ -57,10 +65,9 @@
       .getElementById("sfdc-dl-btn-stop")
       .addEventListener("click", () => {
         isRunning = false;
-        logToUI("🛑 Stopping script after current file...");
+        logToUI("Stopping script after current file...");
         document.getElementById("sfdc-dl-btn-stop").innerText = "Stopping...";
-        document.getElementById("sfdc-dl-btn-stop").style.backgroundColor =
-          "#9ca3af";
+        document.getElementById("sfdc-dl-btn-stop").disabled = true;
       });
   };
 
@@ -113,7 +120,7 @@
     }
     if (btn) {
       btn.innerText = "Done";
-      btn.style.backgroundColor = "#10b981";
+      btn.classList.add("is-done");
       btn.disabled = true;
     }
     if (etaEl) {
@@ -247,7 +254,7 @@
       if (match && match[1]) {
         totalDownloads = parseInt(match[1].replace(/,/g, ""), 10);
         console.log(
-          `✅ Auto-detected total downloads from page: ${totalDownloads}`,
+          `Auto-detected total downloads from page: ${totalDownloads}`,
         );
         break;
       }
@@ -266,7 +273,7 @@
   const TOTAL_EXPECTED_DOWNLOADS = totalDownloads;
 
   injectUI(TOTAL_EXPECTED_DOWNLOADS);
-  logToUI(`🚀 Starting mass download of ${TOTAL_EXPECTED_DOWNLOADS} files...`);
+  logToUI(`Starting download of ${TOTAL_EXPECTED_DOWNLOADS} files...`);
 
   // Seed the UI with the initial static ETA before the loop starts
   updateCountUI(0, TOTAL_EXPECTED_DOWNLOADS, null);
@@ -297,7 +304,7 @@
     if (unprocessedItems.length === 0) {
       // No new rows found. We need to scroll down to trigger Salesforce to render more.
       if (allDropdownButtons.length > 0) {
-        logToUI("📜 Scrolling down to load more files...");
+        logToUI("Scrolling to load more files...");
         allDropdownButtons[allDropdownButtons.length - 1].scrollIntoView({
           behavior: "smooth",
           block: "end",
@@ -340,23 +347,23 @@
             TOTAL_EXPECTED_DOWNLOADS,
             scriptStartTime,
           );
-          logToUI(`✅ Triggered download (${successCount})`);
+          logToUI(`Triggered download (${successCount})`);
         } else {
           errorCount++;
           processedRowSignatures.add(item.sig); // Mark as processed anyway so we don't infinitely loop on it
-          logToUI(`⚠️ Skipping row (Could not find download link)`);
+          logToUI("Skipping row (could not find download link).");
           item.btn.click(); // Close menu
         }
 
         await sleep(DELAY_BETWEEN_DOWNLOADS_MS);
       } catch (err) {
         processedRowSignatures.add(item.sig);
-        logToUI(`❌ Error on row, skipping...`);
+        logToUI("Error on row; skipping.");
       }
     }
   }
 
-  logToUI(`🎉 Script Finished! Total: ${successCount}`);
+  logToUI(`Script finished. Total downloads triggered: ${successCount}.`);
   finishUI();
 
   if (successCount > 5) {
