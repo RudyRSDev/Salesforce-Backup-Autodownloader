@@ -2,7 +2,7 @@
 
 `sf_download.js` automates the sequential downloading of Salesforce backup files from the backup page currently open in your browser. It finds the page's **Download** links, extracts their URLs, and requests each download through a hidden iframe while displaying progress in a small on-page tracker.
 
-Both browser scripts use a consistent, DaisyUI-inspired light theme with Salesforce-blue accents and the Font Awesome Free solid cloud icon embedded inline. The styling and icon are bundled in each script, so neither DaisyUI nor Font Awesome needs to be loaded at runtime. The cloud icon is licensed under [CC BY 4.0](https://fontawesome.com/license/free).
+All browser scripts use a consistent, DaisyUI-inspired light theme with Salesforce-blue accents and the Font Awesome Free solid cloud icon embedded inline. The styling and icon are bundled in each script, so neither DaisyUI nor Font Awesome needs to be loaded at runtime. The cloud icon is licensed under [CC BY 4.0](https://fontawesome.com/license/free).
 
 This is a browser-page script, not a command-line downloader: it relies on your active Salesforce session, the page's DOM, and browser storage. A terminal `curl` command can download the script, but cannot run it in the context of your logged-in Salesforce tab.
 
@@ -35,6 +35,16 @@ This is a browser-page script, not a command-line downloader: it relies on your 
 - Set the wait between download requests in seconds. The minimum is 60 seconds.
 - Progress and the selected range's end are saved in browser local storage under `sf_export_resume_index` and `sf_export_resume_end`.
 - The on-page tracker shows progress and has a red **Stop** button. When all selected downloads have been requested, saved progress is cleared. “Complete” means the browser was asked to start each download; confirm that the files actually finished downloading.
+
+## Download files from a Files list
+
+`file_download.js` downloads every file in a Lightning Files list by opening each row's menu and clicking **Download**.
+
+1. On the record, open the Files related list and click **View All**. The related list on the record page only shows the first few files.
+2. Paste the contents of [`file_download.js`](./file_download.js) into the browser console and press Enter.
+3. If the browser asks to download multiple files, allow it.
+
+The script scrolls the list to load more rows as it goes. A total such as `25 / 50+` means Salesforce hasn't reported the final count yet. Rows without a **Download** option, such as linked external files, are skipped and listed in the console. For a language other than English, change `DOWNLOAD_BUTTON_TEXT` at the top of the script to match the menu label exactly.
 
 ## Notes
 
