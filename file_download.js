@@ -31,6 +31,7 @@
 
   // Global state
   let isRunning = true;
+  let isFinished = false;
   const processedRowSignatures = new Set();
   const skippedFiles = [];
   let successCount = 0;
@@ -64,6 +65,7 @@
             #sfdc-file-tracker .sf-btn { display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border:0;border-radius:8px;background:#dc2626!important;color:#fff!important;font:600 14px ui-sans-serif,system-ui,sans-serif;cursor:pointer;text-shadow:none!important; }
             #sfdc-file-tracker .sf-btn:hover { background:#b91c1c!important; }
             #sfdc-file-tracker .sf-btn.is-done { background:#0176d3!important; }
+            #sfdc-file-tracker .sf-btn.is-done:hover { background:#014486!important; }
             @media(max-width:480px) { #sfdc-file-tracker { right:12px;bottom:12px;width:min(320px,calc(100vw - 24px)); } }
         `;
     document.head.appendChild(style);
@@ -90,6 +92,11 @@
     document
       .getElementById("sfdc-file-btn-stop")
       .addEventListener("click", () => {
+        if (isFinished) {
+          container.remove();
+          style.remove();
+          return;
+        }
         isRunning = false;
         console.log("Stopping script after current file...");
         document.getElementById("sfdc-file-btn-stop").innerText = "Stopping...";
@@ -140,12 +147,14 @@
   };
 
   const finishUI = (label) => {
+    isFinished = true;
     const btn = document.getElementById("sfdc-file-btn-stop");
     const etaEl = document.getElementById("sfdc-file-eta");
     if (btn) {
       btn.innerText = label;
+      btn.title = "Close this tracker";
       btn.classList.add("is-done");
-      btn.disabled = true;
+      btn.disabled = false;
     }
     if (etaEl) {
       etaEl.innerText = label;
