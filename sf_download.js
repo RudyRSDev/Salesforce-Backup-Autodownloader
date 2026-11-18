@@ -45,8 +45,8 @@
   const END_STORAGE_KEY = "sf_export_resume_end";
   const savedIndexValue = localStorage.getItem(STORAGE_KEY);
   const savedIndex = savedIndexValue === null ? null : Number(savedIndexValue);
-  const savedEndValue = localStorage.getItem(END_STORAGE_KEY);
-  const savedEnd = savedEndValue === null ? totalFiles : Number(savedEndValue);
+  // The end of the range is no longer saved; clear any value left by older versions
+  localStorage.removeItem(END_STORAGE_KEY);
   const hasSavedProgress =
     savedIndex !== null &&
     Number.isInteger(savedIndex) &&
@@ -55,7 +55,6 @@
 
   if (savedIndexValue !== null && !hasSavedProgress) {
     localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(END_STORAGE_KEY);
   }
 
   // --- 4. FLOATING UI SETUP (DaisyUI Light Theme) ---
@@ -110,14 +109,11 @@
     new Promise((resolve) => {
       const modal = document.createElement("div");
       modal.id = "sf-dl-options";
-      const defaultStart = hasSavedProgress ? savedIndex + 1 : 1;
-      const defaultEnd =
-        hasSavedProgress &&
-        Number.isInteger(savedEnd) &&
-        savedEnd > savedIndex &&
-        savedEnd <= totalFiles
-          ? savedEnd
-          : totalFiles;
+      // Resume at the file after the last one requested, through the current file count
+      const defaultStart = hasSavedProgress
+        ? Math.min(savedIndex + 2, totalFiles)
+        : 1;
+      const defaultEnd = totalFiles;
       modal.innerHTML = `
         <section class="sf-dialog" role="dialog" aria-modal="true" aria-labelledby="sf-dl-title">
           <div class="sf-brand">
@@ -126,7 +122,7 @@
             </svg>
             <h2 id="sf-dl-title" class="sf-title">Backup Downloader</h2>
           </div>
-          <p class="sf-description">${hasSavedProgress ? `Previous progress found. The last requested file was ${savedIndex + 1}.` : `${totalFiles} download files found.`}</p>
+          <p class="sf-description">${hasSavedProgress ? `Previous progress found. The last requested file was ${savedIndex + 1} of ${totalFiles}.` : `${totalFiles} download files found.`}</p>
           <div class="sf-fields">
             <label class="sf-field">First file
               <input class="sf-input" id="sf-dl-start" type="number" min="1" max="${totalFiles}" value="${defaultStart}">
@@ -216,7 +212,6 @@
     const { startIndex, endIndex, waitMs } = options;
     let lastFileProcessed = startIndex;
 
-    localStorage.setItem(END_STORAGE_KEY, endIndex);
     for (let i = startIndex; i < endIndex; i++) {
       if (window.sfExporterStopped) break;
 
@@ -294,7 +289,6 @@
         </div>
         <p class="sf-subtitle">${endIndex - startIndex} files processed (files ${startIndex + 1}-${endIndex}).</p>`;
       localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(END_STORAGE_KEY);
       console.log("All downloads complete.");
     }
   })();

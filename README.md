@@ -31,9 +31,9 @@ This is a browser-page script, not a command-line downloader: it relies on your 
 ## Downloads, progress, and resume
 
 - The script recognizes links labeled **Download** that use the Salesforce export link formats it supports. If it finds no matching links, check that the correct page or frame is selected.
-- An options dialog appears before each run with **Download** and **Cancel** buttons. Enter the first and last file numbers to download a specific range (for example, 300 through 500). If saved progress is shown, adjust the range fields to retry the last requested file, continue at the next file, or restart from file 1.
+- An options dialog appears before each run with **Download** and **Cancel** buttons. Enter the first and last file numbers to download a specific range (for example, 300 through 500). The last file defaults to the number of download files found on the page. If saved progress is found, the first file defaults to the one after the last requested file; lower it by one to retry that file, or set it to 1 to restart.
 - Set the wait between download requests in seconds. The minimum is 60 seconds.
-- Progress and the selected range's end are saved in browser local storage under `sf_export_resume_index` and `sf_export_resume_end`.
+- Progress is saved in browser local storage under `sf_export_resume_index`.
 - The on-page tracker shows progress and has a red **Stop** button. When all selected downloads have been requested, saved progress is cleared. “Complete” means the browser was asked to start each download; confirm that the files actually finished downloading.
 
 ## Download files from a Files list
